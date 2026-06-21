@@ -1,176 +1,177 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
+import { motion } from 'framer-motion';
 import { Button } from "@/components/ui/button";
-import { UploadCloud, ImageIcon, Download } from 'lucide-react';
+import Link from 'next/link';
+import { Sparkles, ChevronRight, Camera, Zap, ShieldCheck } from 'lucide-react';
+import { SignInButton, useAuth } from "@clerk/nextjs";
 
-export default function StudioWorkspace() {
-  const [sliderPos, setSliderPos] = useState(50);
-  const [isGenerating, setIsGenerating] = useState(false);
-  
-  const [bgContext, setBgContext] = useState("Minimalist Studio Backdrop");
-  const [lighting, setLighting] = useState("Cinematic Rim Lighting");
-  const [lens, setLens] = useState("85mm Portrait (Shallow Depth)");
+// Deterministic Stars for Space Background (Hydration safe)
+const stars = Array.from({ length: 40 }).map((_, i) => ({
+  id: i,
+  top: `${(i * 27) % 100}%`,
+  left: `${(i * 13) % 100}%`,
+  size: (i % 3) + 1,
+  duration: (i % 4) + 2,
+  delay: (i % 3) * 0.5,
+}));
 
-  const [productFile, setProductFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string>("https://images.unsplash.com/photo-1542291026-7eec264c27ff?q=80&w=800&auto=format&fit=crop");
-  
-  // Default demo image
-  const [aiGeneratedImage, setAiGeneratedImage] = useState<string>("https://images.unsplash.com/photo-1608231387042-66d1773070a5?q=80&w=800&auto=format&fit=crop");
+// Floating AI Image Placeholders (Premium Unsplash Assets)
+const floatingImages = [
+  { id: 1, src: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=500&q=80", left: "5%", size: 220, duration: 35, delay: 0, rotStart: -10, rotEnd: 15 },
+  { id: 2, src: "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=500&q=80", left: "75%", size: 280, duration: 40, delay: 5, rotStart: 20, rotEnd: -10 },
+  { id: 3, src: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=500&q=80", left: "20%", size: 180, duration: 30, delay: 12, rotStart: 0, rotEnd: -20 },
+  { id: 4, src: "https://images.unsplash.com/photo-1524592094714-0f0654e20314?w=500&q=80", left: "85%", size: 200, duration: 45, delay: 2, rotStart: 15, rotEnd: 30 },
+  { id: 5, src: "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=500&q=80", left: "45%", size: 300, duration: 50, delay: 15, rotStart: -5, rotEnd: 5 },
+];
 
-  const fileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
-      reader.onerror = (error) => reject(error);
-    });
-  };
+export default function LandingPage() {
+  const { isSignedIn } = useAuth();
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    if (event.target.files && event.target.files[0]) {
-      const file = event.target.files[0];
-      setProductFile(file);
-      setPreviewUrl(URL.createObjectURL(file));
-    }
-  };
-
-  // NAYA FUNCTION: Image Download Karne Ke Liye
-  const handleDownload = async () => {
-    try {
-      const response = await fetch(aiGeneratedImage);
-      const blob = await response.blob();
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `StudioAI_Asset_${Date.now()}.png`; // File ka automatic professional naam
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } catch (error) {
-      console.error("Download failed", error);
-      alert("Download me problem aayi. Kripya image par right-click karke 'Save Image As' karein.");
-    }
-  };
-
-  const handleGenerate = async () => {
-    if (!productFile) {
-      alert("Boss Ayush, please upload a product photo first from the right menu! 📸");
-      return;
-    }
-
-    setIsGenerating(true);
-    try {
-      const base64Image = await fileToBase64(productFile);
-      
-      const finalPrompt = `A hyper-realistic professional product photo of the main subject. Background: ${bgContext}. Lighting: ${lighting}. Camera Lens: ${lens}. 8k resolution, highly detailed, beautiful commercial photography, photorealistic, cinematic.`;
-      
-      const res = await fetch('/api/generate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt: finalPrompt, image: base64Image })
-      });
-      
-      const data = await res.json();
-      
-      if (data.imageUrl) {
-        setAiGeneratedImage(data.imageUrl);
-      } else {
-        alert("Oops! Generation failed. Error in backend.");
-      }
-    } catch (error) {
-      console.error("Error:", error);
-      alert("Error connecting to AI Server. Backend ka terminal check karein.");
-    } finally {
-      setIsGenerating(false);
-    }
-  };
+  const containerVariants = { hidden: { opacity: 0 }, visible: { opacity: 1, transition: { staggerChildren: 0.2, delayChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 40 }, visible: { opacity: 1, y: 0, transition: { duration: 0.8, ease: [0.16, 1, 0.3, 1] } } };
+  const floatAnim = { y: ["-15px", "15px"], transition: { duration: 3.5, repeat: Infinity, repeatType: "reverse" as const, ease: "easeInOut" } };
 
   return (
-    <div className="flex h-screen bg-neutral-950 text-neutral-50 overflow-hidden font-sans">
+    <div className="min-h-screen bg-[#030014] text-neutral-50 font-sans selection:bg-emerald-500/30 overflow-hidden relative">
       
-      {/* LEFT SIDEBAR */}
-      <aside className="w-64 border-r border-neutral-800 bg-neutral-900 p-6 flex flex-col justify-between z-10">
-        <div className="space-y-8">
-          <div className="font-black text-2xl tracking-widest text-white">STUDIO<span className="text-emerald-500">.AI</span></div>
-          <nav className="space-y-3">
-            <Button variant="ghost" className="w-full justify-start text-neutral-400 hover:text-white hover:bg-neutral-800">Dashboard</Button>
-            <Button variant="secondary" className="w-full justify-start bg-neutral-800 text-white hover:bg-neutral-700">AI Generator</Button>
-            <Button variant="ghost" className="w-full justify-start text-neutral-400 hover:text-white hover:bg-neutral-800">Billing & Plans</Button>
-          </nav>
-        </div>
-      </aside>
+      {/* ======================================================== */}
+      {/* 1. SPACE BACKGROUND & STARS */}
+      {/* ======================================================== */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {/* Deep Nebulas (Glows) */}
+        <motion.div animate={{ scale: [1, 1.2, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 10, repeat: Infinity, ease: "easeInOut" }} className="absolute top-[-10%] left-[-10%] w-[600px] h-[600px] bg-purple-800 blur-[150px] rounded-full mix-blend-screen" />
+        <motion.div animate={{ scale: [1, 1.3, 1], opacity: [0.1, 0.2, 0.1] }} transition={{ duration: 12, repeat: Infinity, ease: "easeInOut", delay: 2 }} className="absolute bottom-[-10%] right-[-10%] w-[700px] h-[700px] bg-emerald-900 blur-[150px] rounded-full mix-blend-screen" />
+        
+        {/* Twinkling Stars */}
+        {stars.map((star) => (
+          <motion.div
+            key={star.id}
+            className="absolute bg-white rounded-full"
+            style={{ top: star.top, left: star.left, width: star.size, height: star.size }}
+            animate={{ opacity: [0.1, 0.8, 0.1], scale: [0.8, 1.2, 0.8] }}
+            transition={{ duration: star.duration, repeat: Infinity, delay: star.delay, ease: "easeInOut" }}
+          />
+        ))}
+      </div>
 
-      {/* CENTER WORKSPACE */}
-      <main className="flex-1 flex flex-col items-center justify-center p-8 bg-neutral-950 relative">
-        <div className="absolute top-8 left-8 flex justify-between w-[calc(100%-4rem)] items-start">
+      {/* ======================================================== */}
+      {/* 2. FLOATING AI IMAGES ANIMATION (Updated for visibility) */}
+      {/* ======================================================== */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        {floatingImages.map((img) => (
+          <motion.div
+            key={img.id}
+            className="absolute rounded-2xl overflow-hidden border border-white/5 shadow-[0_0_50px_rgba(0,0,0,0.8)]"
+            style={{ left: img.left, width: img.size, height: img.size * 1.3 }}
+            initial={{ y: "110vh", opacity: 0 }}
+            animate={{ 
+              y: ["110vh", "-50vh"], 
+              rotate: [img.rotStart, img.rotEnd],
+              // peak Opacity badhakar 0.35 ki (Ab images saaf dikhengi)
+              opacity: [0, 0.35, 0.35, 0] 
+            }}
+            transition={{ duration: img.duration, repeat: Infinity, ease: "linear", delay: img.delay }}
+          >
+             {/* brightness-50 se dark rahi, grayscale se space theme match hui */}
+             <img src={img.src} alt="AI Concept" className="w-full h-full object-cover grayscale brightness-50 mix-blend-overlay" />
+             {/* Gradient fade blend karne ke liye */}
+             <div className="absolute inset-0 bg-gradient-to-t from-[#030014] via-transparent to-[#030014] opacity-80" />
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ======================================================== */}
+      {/* FOREGROUND CONTENT (Website UI) */}
+      {/* ======================================================== */}
+      <div className="relative z-10">
+        
+        {/* Navbar */}
+        <motion.nav initial={{ opacity: 0, y: -20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 1, ease: "easeOut" }} className="flex justify-between items-center p-6 max-w-7xl mx-auto border-b border-white/5 backdrop-blur-md bg-black/10">
+          <div className="font-black text-2xl tracking-widest text-white flex items-center gap-2">
+            STUDIO<span className="text-emerald-500 drop-shadow-[0_0_10px_rgba(16,185,129,0.5)]">.AI</span>
+          </div>
           <div>
-            <h1 className="text-2xl font-semibold">Product Image Workspace</h1>
-            <p className="text-neutral-500 text-sm mt-1">Configure lighting and generate AI asset.</p>
+            {isSignedIn ? (
+              <Link href="/dashboard">
+                <Button className="bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white/20 font-bold px-6 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(255,255,255,0.05)] hover:scale-105 active:scale-[0.98]">
+                  Go to Dashboard
+                </Button>
+              </Link>
+            ) : (
+              <SignInButton forceRedirectUrl="/dashboard" mode="modal">
+                <Button className="bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white font-bold px-6 rounded-full transition-all duration-300 shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-105 active:scale-[0.98]">
+                  Sign In
+                </Button>
+              </SignInButton>
+            )}
           </div>
-          
-          {/* NAYA DOWNLOAD BUTTON */}
-          <Button onClick={handleDownload} variant="outline" className="bg-neutral-900 border-neutral-700 hover:bg-emerald-600 hover:text-white text-emerald-400 transition-all flex gap-2 items-center">
-            <Download size={16} /> Download Asset
-          </Button>
-        </div>
+        </motion.nav>
 
-        <div className="relative w-full max-w-2xl aspect-[4/3] bg-neutral-900 rounded-2xl overflow-hidden border border-neutral-800 shadow-2xl flex items-center justify-center group mt-8">
-          
-          <div className="absolute inset-0 bg-contain bg-center bg-no-repeat transition-all duration-75" style={{ backgroundImage: `url(${aiGeneratedImage})`, clipPath: `polygon(0 0, ${sliderPos}% 0, ${sliderPos}% 100%, 0 100%)` }} />
-          <div className="absolute inset-0 bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url(${previewUrl})`, clipPath: `polygon(${sliderPos}% 0, 100% 0, 100% 100%, ${sliderPos}% 100%)` }} />
+        {/* Hero Section */}
+        <main className="flex flex-col items-center justify-center text-center px-4 pt-32 pb-24 max-w-5xl mx-auto">
+          <motion.div variants={containerVariants} initial="hidden" animate="visible" className="flex flex-col items-center">
+              
+              <motion.div variants={itemVariants}>
+                <motion.div animate={floatAnim} className="inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-[#0a0f24]/60 border border-emerald-500/30 text-emerald-400 text-sm font-semibold mb-8 backdrop-blur-md shadow-[0_0_30px_rgba(16,185,129,0.2)]">
+                  <Sparkles size={16} className="animate-pulse" /> Enterprise AI Image Pipeline
+                </motion.div>
+              </motion.div>
 
-          <div className="absolute top-0 bottom-0 w-1 bg-white cursor-ew-resize shadow-[0_0_10px_rgba(0,0,0,0.5)] z-20" style={{ left: `calc(${sliderPos}% - 2px)` }}>
-            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full flex items-center justify-center shadow-lg">
-              <span className="text-black text-xs font-bold">◂ ▸</span>
-            </div>
+              <motion.h1 variants={itemVariants} className="text-5xl md:text-7xl font-black tracking-tight mb-8 leading-[1.15] text-white drop-shadow-2xl">
+                Studio-Grade Photography. <br/>
+                <span className="text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-400 drop-shadow-[0_0_20px_rgba(52,211,153,0.3)]">
+                  Zero Equipment.
+                </span>
+              </motion.h1>
+
+              <motion.p variants={itemVariants} className="text-lg md:text-xl text-slate-300 max-w-2xl mb-12 font-medium leading-relaxed drop-shadow-lg">
+                Transform raw phone pictures into breathtaking 8K commercial assets in seconds. The ultimate AI-powered workspace for modern brands and creators.
+              </motion.p>
+
+              <motion.div variants={itemVariants} className="flex flex-col sm:flex-row gap-5">
+                {isSignedIn ? (
+                  <Link href="/dashboard">
+                    <Button className="h-14 px-8 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-lg font-bold rounded-full transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-[0.98] flex items-center gap-2">
+                      Enter Workspace <ChevronRight size={20} />
+                    </Button>
+                  </Link>
+                ) : (
+                  <SignInButton forceRedirectUrl="/dashboard" mode="modal">
+                    <Button className="h-14 px-8 bg-gradient-to-r from-emerald-600 to-teal-500 hover:from-emerald-500 hover:to-teal-400 text-white text-lg font-bold rounded-full transition-all duration-300 shadow-[0_0_40px_rgba(16,185,129,0.4)] hover:scale-105 active:scale-[0.98] flex items-center gap-2">
+                      Get Started for Free <ChevronRight size={20} />
+                    </Button>
+                  </SignInButton>
+                )}
+              </motion.div>
+          </motion.div>
+        </main>
+
+        {/* Features Section */}
+        <section id="features" className="py-24 bg-black/40 border-t border-white/5 backdrop-blur-xl">
+          <div className="max-w-7xl mx-auto px-6 grid grid-cols-1 md:grid-cols-3 gap-8">
+                <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.1 }} whileHover={{ y: -12, scale: 1.03 }} className="p-8 bg-[#0a0f24]/40 border border-white/10 hover:border-emerald-500/50 rounded-3xl transition-all duration-500 shadow-lg hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] group cursor-pointer">
+                    <div className="w-14 h-14 bg-emerald-500/10 border border-emerald-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-emerald-500/20 transition-colors duration-500"><Camera className="text-emerald-400" size={28} /></div>
+                    <h3 className="text-xl font-bold mb-3 text-white tracking-tight">Virtual Studio Context</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">Place your product in completely photorealistic environments without leaving your desk.</p>
+                </motion.div>
+                
+                <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.2 }} whileHover={{ y: -12, scale: 1.03 }} className="p-8 bg-[#0a0f24]/40 border border-white/10 hover:border-emerald-500/50 rounded-3xl transition-all duration-500 shadow-lg hover:shadow-[0_20px_40px_rgba(16,185,129,0.15)] group cursor-pointer">
+                    <div className="w-14 h-14 bg-teal-500/10 border border-teal-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-teal-500/20 transition-colors duration-500"><Zap className="text-teal-400" size={28} /></div>
+                    <h3 className="text-xl font-bold mb-3 text-white tracking-tight">Lightning Fast Pipeline</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">Skip the photoshoot. Generate 8K high-resolution commercial assets in under 10 seconds.</p>
+                </motion.div>
+                
+                <motion.div initial={{ opacity: 0, y: 50 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.6, delay: 0.3 }} whileHover={{ y: -12, scale: 1.03 }} className="p-8 bg-[#0a0f24]/40 border border-white/10 hover:border-cyan-500/50 rounded-3xl transition-all duration-500 shadow-lg hover:shadow-[0_20px_40px_rgba(6,182,212,0.15)] group cursor-pointer">
+                    <div className="w-14 h-14 bg-cyan-500/10 border border-cyan-500/20 rounded-2xl flex items-center justify-center mb-6 group-hover:bg-cyan-500/20 transition-colors duration-500"><ShieldCheck className="text-cyan-400" size={28} /></div>
+                    <h3 className="text-xl font-bold mb-3 text-white tracking-tight">Commercial Rights</h3>
+                    <p className="text-slate-400 text-sm leading-relaxed">You own everything you generate. Use your assets freely in ads, social media, and storefronts.</p>
+                </motion.div>
           </div>
-          <input type="range" min="0" max="100" value={sliderPos} onChange={(e) => setSliderPos(Number(e.target.value))} className="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-30" />
-          
-          <div className="absolute bottom-4 left-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-semibold z-10 flex items-center gap-2"><ImageIcon size={14}/> AI Generated</div>
-          <div className="absolute bottom-4 right-4 bg-black/60 backdrop-blur-md px-3 py-1 rounded-md text-xs font-semibold z-10 flex items-center gap-2"><ImageIcon size={14}/> Raw Product</div>
-        </div>
-      </main>
+        </section>
 
-      {/* RIGHT SIDEBAR */}
-      <aside className="w-80 border-l border-neutral-800 bg-neutral-900 p-6 flex flex-col justify-between shadow-xl z-10 relative">
-        <div className="space-y-6">
-          <h3 className="text-sm font-bold uppercase tracking-widest text-neutral-400">AI Settings</h3>
-          
-          <div className="space-y-3 bg-neutral-950 p-4 rounded-xl border border-neutral-800">
-            <label className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Step 1: Upload Product</label>
-            <div className="relative">
-              <input type="file" accept="image/png, image/jpeg, image/webp" onChange={handleFileChange} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-              <Button variant="outline" className="w-full bg-neutral-900 text-neutral-200 border-dashed border-neutral-600 hover:bg-neutral-800 hover:text-white flex justify-center items-center gap-2">
-                <UploadCloud size={18} className="text-emerald-500" />
-                {productFile ? productFile.name.substring(0, 20) + '...' : "Choose File..."}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Background Context</label>
-            <select value={bgContext} onChange={(e) => setBgContext(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
-              <option>Minimalist Studio Backdrop</option>
-              <option>Outdoor Natural Marble</option>
-              <option>Neon Cyberpunk Cityscape</option>
-            </select>
-          </div>
-
-          <div className="space-y-3">
-            <label className="text-xs text-neutral-400 font-medium uppercase tracking-wider">Lighting Style</label>
-            <select value={lighting} onChange={(e) => setLighting(e.target.value)} className="w-full bg-neutral-950 border border-neutral-800 rounded-lg p-3 text-sm text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer">
-              <option>Cinematic Rim Lighting</option>
-              <option>Softbox Commercial Studio</option>
-              <option>Dramatic Hard Shadows</option>
-            </select>
-          </div>
-        </div>
-
-        <Button onClick={handleGenerate} disabled={isGenerating} className="w-full py-6 text-sm bg-white text-black hover:bg-neutral-200 font-bold tracking-wide rounded-lg transition-all disabled:opacity-50 mt-6 shadow-[0_0_15px_rgba(16,185,129,0.3)]">
-          {isGenerating ? "Rendering from Replicate..." : "Generate Product Image ✦"}
-        </Button>
-      </aside>
+      </div>
     </div>
   );
 }
