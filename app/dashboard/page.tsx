@@ -71,7 +71,7 @@ export default function StudioWorkspace() {
       const email = user.primaryEmailAddress?.emailAddress || "user@studio.ai";
       const data = await syncUserAccount(email);
       setCredits(data.credits);
-      setGalleryImages(data.gallery as GalleryItem[]);
+      setGalleryImages(data.gallery as any);
     } catch (error) {
       console.error("Dashboard Sync Error:", error);
     } finally {
