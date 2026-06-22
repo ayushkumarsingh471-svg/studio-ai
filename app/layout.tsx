@@ -10,15 +10,11 @@ export const metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <ClerkProvider
-      appearance={{
-        baseTheme: dark, 
-        variables: {
-          colorPrimary: '#eab308', // Main Yellow color
-          colorBackground: '#020617', // Dark Midnight Background
-          colorText: '#fde047', // Base Yellow Text
-          colorInputBackground: '#0f172a', 
-          colorInputText: '#ffffff', // User jo type karega wo white rahega taaki clear padha jaye
-        },
+  appearance={{
+    variables: {
+      colorPrimary: '#eab308',
+      colorBackground: '#020617',
+    },
         elements: {
           card: 'bg-[#020617] border border-yellow-500/20 shadow-[0_0_40px_-10px_rgba(234,179,8,0.15)] rounded-2xl',
           
