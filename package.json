@@ -21,6 +21,7 @@
     "next": "16.2.9",
     "radix-ui": "^1.6.0",
     "react": "19.2.4",
+    "react-confetti": "^6.4.0",
     "react-dom": "19.2.4",
     "replicate": "^1.4.0",
     "shadcn": "^4.11.0",

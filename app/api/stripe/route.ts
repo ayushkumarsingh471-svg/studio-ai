@@ -5,9 +5,18 @@ import { UsersTable } from "@/lib/schema";
 import { eq } from "drizzle-orm";
 import Stripe from "stripe";
 
-export async function GET() {
+// Ab hum POST use karenge kyunki frontend se data (priceId) aa raha hai
+export async function POST(req: Request) {
   try {
     console.log("--- STRIPE PAYMENT PROCESS STARTED ---");
+
+    // 0. Get Price ID from Frontend Request
+    const body = await req.json();
+    const { priceId } = body;
+
+    if (!priceId) {
+      throw new Error("Price ID is missing from the request");
+    }
     
     // 1. Secret Key Check
     if (!process.env.STRIPE_SECRET_KEY) {
@@ -15,7 +24,7 @@ export async function GET() {
     }
 
     const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-      apiVersion: "2026-05-27.dahlia",
+      apiVersion: "2026-05-27.dahlia" as any, // Aapki purani version
     });
 
     // 2. User Login Check
@@ -33,27 +42,17 @@ export async function GET() {
     }
 
     // 4. Stripe Checkout Session
-    console.log("Step 3: Creating Stripe Checkout Page...");
+    console.log("Step 3: Creating Stripe Checkout Page for Price:", priceId);
     const stripeSession = await stripe.checkout.sessions.create({
-      success_url: "http://localhost:3000/dashboard",
-      cancel_url: "http://localhost:3000/dashboard",
+      success_url: "http://localhost:3000/dashboard?success=true", // 🎉 Payment ke baad patakhe!
+      cancel_url: "http://localhost:3000/pricing",
       payment_method_types: ["card"],
       mode: "subscription",
       billing_address_collection: "auto",
       customer_email: user.emailAddresses[0].emailAddress,
       line_items: [
         {
-          price_data: {
-            currency: "USD",
-            product_data: {
-              name: "Studio.AI Professional",
-              description: "Unlimited Studio Generation Credits",
-            },
-            unit_amount: 1900, // $19.00
-            recurring: {
-              interval: "month",
-            },
-          },
+          price: priceId, // Yahan aayegi hamari Stripe Dashboard wali dynamic ID!
           quantity: 1,
         },
       ],
@@ -66,10 +65,7 @@ export async function GET() {
     return NextResponse.json({ url: stripeSession.url });
 
   } catch (error: any) {
-    // Yahan hum exactly check kar rahe hain ki engine kahan fail hua
     console.error("🔥 ACTUAL STRIPE ERROR CAUGHT:", error.message || error);
-    
-    // Alert crash theek karne ke liye hum plain text ki jagah JSON bhej rahe hain
     return NextResponse.json({ error: error.message || "Payment Gateway failed to start" }, { status: 500 });
   }
 }

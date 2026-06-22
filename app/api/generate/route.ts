@@ -1,88 +1,76 @@
 import { NextResponse } from "next/server";
-import { db } from "@/lib/db";
-import { UsersTable, GenerationsTable } from "@/lib/schema";
-import { eq } from "drizzle-orm";
 import { currentUser } from "@clerk/nextjs/server";
-import Replicate from "replicate";
-import { UTApi } from "uploadthing/server"; // Naya Cloud System
-
-const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_TOKEN,
-});
-
-const utapi = new UTApi(); // Cloud Storage Engine Start kiya
+import { db } from "@/lib/db";
+import { UsersTable } from "@/lib/schema"; 
+import { eq } from "drizzle-orm";
+import Replicate from "replicate"; // 🚀 SOYA HUA ENGINE ZINDA HO GAYA!
 
 export async function POST(req: Request) {
   try {
-    console.log("--- NEW GENERATION REQUEST STARTED ---");
+    const body = await req.json();
+    const { prompt, image } = body;
 
-    const { prompt, image } = await req.json();
+    // 1. Basic Check
+    if (!prompt || !image) {
+      return NextResponse.json({ error: "Prompt aur Image dono zaroori hain!" }, { status: 400 });
+    }
+
+    // 2. User Verification (Clerk)
     const user = await currentUser();
-
-    // 1. Security Check
     if (!user) {
-      return NextResponse.json({ error: "Unauthorized access. Please sign in." }, { status: 401 });
+      return NextResponse.json({ error: "Authentication failed. Kripya login karein." }, { status: 401 });
     }
 
-    // 2. Database & Credit Check
-    const userData = await db.select().from(UsersTable).where(eq(UsersTable.clerkId, user.id));
+    // 3. Database Check (Credits bache hain ya nahi?)
+    const [dbUser] = await db.select().from(UsersTable).where(eq(UsersTable.clerkId, user.id));
 
-    if (userData.length === 0) {
-       return NextResponse.json({ error: "User profile not found." }, { status: 404 });
+    if (!dbUser || (dbUser.credits || 0) <= 0) {
+      return NextResponse.json({ 
+        error: "Aapke credits khatam ho gaye hain. Kripya naya plan upgrade karein." 
+      }, { status: 403 });
     }
 
-    const userCredits = userData[0].credits ?? 0;
-    if (userCredits <= 0) {
-       return NextResponse.json({ error: "Credit limit reached. Please upgrade your plan." }, { status: 403 });
-    }
+    console.log(`🚀 Asli AI Engine Started! User: ${user.firstName} | Prompt: ${prompt.substring(0, 50)}...`);
 
-    let tempImageUrl = "";
-
-    // 3. AI GENERATION (Mock ya Real)
-    if (process.env.USE_MOCK_AI === 'true') {
-      console.log("Status: Using MOCK AI...");
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-      tempImageUrl = "https://images.unsplash.com/photo-1542291026-7eec264c27ff?w=1000&q=80"; 
-    } else {
-      console.log("Status: Sending request to Real AI Engine (Replicate)...");
-      const output = await replicate.run(
-        "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b",
-        {
-          input: {
-            prompt: prompt,
-            image: image,
-            width: 1024,
-            height: 1024,
-            num_inference_steps: 25
-          }
-        }
-      );
-      tempImageUrl = (output as string[])[0]; // Yeh link 1 ghante mein expire ho jayega
-    }
-
-    // 4. CLOUD BACKUP (Photo ko hamesha ke liye UploadThing par daalna)
-    console.log("Status: Uploading to Cloud Storage...");
-    const uploadedFile = await utapi.uploadFilesFromUrl(tempImageUrl);
-    const finalPermanentUrl = uploadedFile.data?.url || tempImageUrl;
-    console.log("Status: Cloud Upload Complete! Permanent URL:", finalPermanentUrl);
-
-    // 5. Deduct 1 Credit
-    await db.update(UsersTable)
-      .set({ credits: userCredits - 1 })
-      .where(eq(UsersTable.clerkId, user.id));
-
-    // 6. Save Permanent URL to Gallery Database
-    await db.insert(GenerationsTable).values({
-      clerkId: user.id,
-      imageUrl: finalPermanentUrl, // Ab yahan permanent wala link save hoga
-      prompt: prompt,
+    // ==========================================
+    // 🧠 REAL AI GENERATION ENGINE (Replicate SDXL)
+    // ==========================================
+    const replicate = new Replicate({
+      auth: process.env.REPLICATE_API_TOKEN,
     });
 
-    console.log("--- GENERATION SUCCESSFUL ---");
-    return NextResponse.json({ imageUrl: finalPermanentUrl });
+    // Replicate ke Supercomputer ko request bhej rahe hain
+    const output = await replicate.run(
+      "stability-ai/sdxl:39ed52f2a78e934b3ba6e2a89f5b1c712de7dfea535525255b1aa35c5565e08b", // Yeh ek bohot powerful Image Model hai
+      {
+        input: {
+          prompt: prompt,
+          image: image, // Frontend se aaya hua base64 photo
+          negative_prompt: "ugly, blurry, poorly drawn, distorted, low quality, watermark",
+          prompt_strength: 0.8 // 0.8 ka matlab: Original image aur text dono ka balance rakhega
+        }
+      }
+    ) as string[];
 
-  } catch (error) {
-    console.error("API Route Error:", error);
-    return NextResponse.json({ error: "Failed to generate image. Please check API Credits." }, { status: 500 });
+    // Replicate hamesha ek array (list) bhejta hai, hume pehli image nikalni hai
+    const finalImageUrl = output[0];
+
+    // ==========================================
+    // 💰 DEDUCT 1 CREDIT (Paisa Katna)
+    // ==========================================
+    const newCreditBalance = (dbUser.credits || 1) - 1;
+    
+    await db.update(UsersTable)
+      .set({ credits: newCreditBalance })
+      .where(eq(UsersTable.clerkId, user.id));
+
+    console.log(`✅ Success! Asli photo ban gayi aur 1 Credit Deducted. New Balance: ${newCreditBalance}`);
+
+    // 4. Return Final Image to Frontend
+    return NextResponse.json({ imageUrl: finalImageUrl });
+
+  } catch (error: any) {
+    console.error("🔥 AI Generation Error:", error.message || error);
+    return NextResponse.json({ error: "AI Engine fail ho gaya. Error: " + error.message }, { status: 500 });
   }
 }
