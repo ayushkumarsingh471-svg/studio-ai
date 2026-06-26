@@ -8,7 +8,6 @@ const plans = [
     name: "Basic",
     credits: 100,
     price: 299,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_BASIC_PRICE_ID,
     popular: false,
     description: "Perfect for testing AI image generation.",
     features: ["100 AI Image Credits", "Standard Resolution", "Community Support"],
@@ -17,7 +16,6 @@ const plans = [
     name: "Pro",
     credits: 500,
     price: 899,
-    priceId: process.env.NEXT_PUBLIC_STRIPE_PRO_PRICE_ID,
     popular: true, // VIP Badge trigger
     description: "For regular users who want more AI power.",
     features: [
@@ -30,35 +28,73 @@ const plans = [
 ];
 
 export default function PricingPage() {
-  const [loading, setLoading] = useState(false);
+  // Kaunsa plan load ho raha hai usko track karne ke liye
+  const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
 
-  const handleCheckout = async (priceId: string | undefined) => {
-    if (!priceId) return alert("Price ID not found in .env.local!");
-    setLoading(true);
-    
+  const handleRazorpayPayment = async (planName: string, planPrice: number) => {
+    setLoadingPlan(planName);
+
     try {
-      // Backend API ko Price ID bhej rahe hain
-      const response = await fetch("/api/stripe", {
+      // 1. Razorpay ka script load karna
+      const loadScript = () => {
+        return new Promise((resolve) => {
+          const script = document.createElement("script");
+          script.src = "https://checkout.razorpay.com/v1/checkout.js";
+          script.onload = () => resolve(true);
+          script.onerror = () => resolve(false);
+          document.body.appendChild(script);
+        });
+      };
+
+      const res = await loadScript();
+      if (!res) {
+        alert("Razorpay load nahi hua. Apna internet check karein!");
+        setLoadingPlan(null);
+        return;
+      }
+
+      // 2. Apne backend ko batana ki kitne paise ka order banana hai
+      const response = await fetch("/api/razorpay", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ priceId }),
+        body: JSON.stringify({ amount: planPrice }),
       });
 
       const data = await response.json();
 
-      if (data.url) {
-        // Stripe ke payment page par user ko bhej do
-        window.location.href = data.url;
-      } else {
-        alert("Payment failed: " + data.error);
+      if (!data.orderId) {
+        alert("Order create karne mein error aayi!");
+        setLoadingPlan(null);
+        return;
       }
+
+      // 3. Razorpay Popup (Modal) ki Settings
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: data.amount,
+        currency: "INR",
+        name: "Studio AI",
+        description: `${planName} Plan Subscription`,
+        order_id: data.orderId,
+        handler: function (response: any) {
+          // Yahan hum baad mein database update (credits add) wala webhook lagayenge
+          console.log("Payment Success!", response);
+          alert(`Payment Successful! Aapka ${planName} plan activate ho gaya hai! 🎉`);
+        },
+        theme: {
+          color: "#eab308", // Aapke design ke best value badge se match karta hua Yellow
+        },
+      };
+
+      const paymentObject = new (window as any).Razorpay(options);
+      paymentObject.open();
     } catch (error) {
       console.error("Checkout Error:", error);
       alert("Something went wrong with the checkout process.");
     } finally {
-      setLoading(false);
+      setLoadingPlan(null);
     }
   };
 
@@ -72,7 +108,6 @@ export default function PricingPage() {
           Choose the perfect plan to generate stunning AI images. Buy more credits to get massive bulk discounts!
         </p>
 
-        {/* Grid adjusted for 2 columns */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-10 max-w-4xl mx-auto">
           {plans.map((plan) => (
             <div
@@ -93,7 +128,7 @@ export default function PricingPage() {
 
               <h3 className="text-2xl font-bold text-gray-100">{plan.name}</h3>
               <p className="text-gray-400 mt-2 text-sm h-10">{plan.description}</p>
-              
+
               <div className="my-6">
                 <span className="text-5xl font-black">₹{plan.price}</span>
                 <span className="text-gray-400"> / month</span>
@@ -109,15 +144,15 @@ export default function PricingPage() {
               </ul>
 
               <button
-                onClick={() => handleCheckout(plan.priceId)}
-                disabled={loading}
+                onClick={() => handleRazorpayPayment(plan.name, plan.price)}
+                disabled={loadingPlan === plan.name}
                 className={`w-full py-3 rounded-lg font-bold transition-all ${
                   plan.popular
                     ? "bg-yellow-400 text-black hover:bg-yellow-500"
                     : "bg-gray-800 text-white hover:bg-gray-700"
                 }`}
               >
-                {loading ? "Processing..." : `Get ${plan.credits} Credits`}
+                {loadingPlan === plan.name ? "Processing..." : `Get ${plan.credits} Credits`}
               </button>
             </div>
           ))}
