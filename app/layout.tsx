@@ -1,7 +1,7 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import { dark } from '@clerk/themes'
 import './globals.css'
-import Navbar from '@/components/Navbar' // <-- Navbar yahan import kiya hai
+import Navbar from './components/Navbar'// <-- Navbar yahan import kiya hai
 
 export const metadata = {
   title: 'STUDIO.AI',
