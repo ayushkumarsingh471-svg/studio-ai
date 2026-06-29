@@ -1,7 +1,6 @@
 import { ClerkProvider } from '@clerk/nextjs'
 import { dark } from '@clerk/themes'
 import './globals.css'
-import Navbar from './components/Navbar'// <-- Navbar yahan import kiya hai
 
 export const metadata = {
   title: 'STUDIO.AI',
@@ -13,9 +12,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <ClerkProvider
       appearance={{
         variables: {
-          colorPrimary: '#eab308', // Yellow
-          colorBackground: '#ffffff', // Background White
-          colorText: '#000000', // Text Black for clear readability
+          colorPrimary: '#eab308',
+          colorBackground: '#ffffff',
+          colorText: '#000000',
         },
         elements: {
           card: 'bg-white border border-yellow-500/20 shadow-xl rounded-2xl',
@@ -33,10 +32,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
       <html lang="en">
         <body className="bg-neutral-950 text-white overflow-x-hidden">
-          <Navbar /> {/* <-- Navbar poori site ke liye yahan add kar diya */}
-          <main>
-            {children}
-          </main>
+          {children}
         </body>
       </html>
     </ClerkProvider>

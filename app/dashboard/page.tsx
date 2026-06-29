@@ -83,6 +83,7 @@ export default function StudioWorkspace() {
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null); 
   const [showConfetti, setShowConfetti] = useState(false);
   const [windowSize, setWindowSize] = useState({ width: 0, height: 0 });
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // 🔥 Naya Mobile Menu State
   
   const [genMode, setGenMode] = useState<'product_only' | 'with_model'>('product_only');
   
@@ -347,34 +348,48 @@ export default function StudioWorkspace() {
         </AnimatePresence>
       </div>
 
-      <aside className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 bg-[#0a0f24]/70 lg:bg-[#0a0f24]/50 backdrop-blur-2xl p-4 lg:p-6 flex flex-col lg:justify-between z-20 shrink-0 sticky lg:relative top-0">
-        <div className="space-y-4 lg:space-y-8 flex flex-row lg:flex-col justify-between items-center lg:items-stretch w-full">
+      {/* 🔥 THE NEW MOBILE FRIENDLY SIDEBAR 🔥 */}
+      <aside className="w-full lg:w-64 border-b lg:border-b-0 lg:border-r border-white/5 bg-[#0a0f24]/70 lg:bg-[#0a0f24]/50 backdrop-blur-2xl p-4 lg:p-6 flex flex-col z-20 shrink-0 sticky lg:relative top-0">
+        
+        {/* Logo and Hamburger Row */}
+        <div className="flex justify-between items-center w-full">
           <div className="font-black text-xl lg:text-2xl tracking-widest text-white flex items-center gap-2 drop-shadow-md">
             STUDIO<span className="text-emerald-500">.AI</span>
           </div>
           
-          <nav className="flex flex-row lg:flex-col gap-1.5 lg:space-y-3 overflow-x-auto lg:overflow-visible max-w-[60%] lg:max-w-none no-scrollbar py-1">
-            <Button variant="ghost" onClick={() => setActiveTab('generator')} className={`w-auto lg:w-full justify-start text-xs lg:text-sm px-3 py-2 border ${activeTab === 'generator' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
-              <LayoutDashboard className="mr-1.5 lg:mr-3 h-4 w-4 lg:h-5 lg:w-5 shrink-0"/> <span className="hidden sm:inline lg:inline">AI</span> Generator
+          {/* Mobile Hamburger Button */}
+          <button 
+            className="lg:hidden text-2xl text-emerald-500 focus:outline-none bg-emerald-500/10 p-2 rounded-lg"
+            onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          >
+            {isMobileMenuOpen ? "✖" : "☰"}
+          </button>
+        </div>
+
+        {/* Menu Items and Credits (Collapsible on Mobile) */}
+        <div className={`${isMobileMenuOpen ? "flex" : "hidden"} lg:flex flex-col justify-between h-full mt-6 lg:mt-8`}>
+          <nav className="flex flex-col space-y-2 lg:space-y-3 w-full">
+            <Button variant="ghost" onClick={() => { setActiveTab('generator'); setIsMobileMenuOpen(false); }} className={`w-full justify-start text-sm px-4 py-3 lg:py-2 border transition-all ${activeTab === 'generator' ? 'bg-emerald-500/10 text-emerald-400 border-emerald-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
+              <LayoutDashboard className="mr-3 h-5 w-5 shrink-0"/> AI Generator
             </Button>
-            <Button variant="ghost" onClick={() => setActiveTab('gallery')} className={`w-auto lg:w-full justify-start text-xs lg:text-sm px-3 py-2 border ${activeTab === 'gallery' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
-              <Grid className="mr-1.5 lg:mr-3 h-4 w-4 lg:h-5 lg:w-5 shrink-0"/> <span className="hidden sm:inline lg:inline">My</span> Gallery
+            <Button variant="ghost" onClick={() => { setActiveTab('gallery'); setIsMobileMenuOpen(false); }} className={`w-full justify-start text-sm px-4 py-3 lg:py-2 border transition-all ${activeTab === 'gallery' ? 'bg-teal-500/10 text-teal-400 border-teal-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
+              <Grid className="mr-3 h-5 w-5 shrink-0"/> My Gallery
             </Button>
-            <Button variant="ghost" onClick={() => setActiveTab('billing')} className={`w-auto lg:w-full justify-start text-xs lg:text-sm px-3 py-2 border ${activeTab === 'billing' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
-              <CreditCard className="mr-1.5 lg:mr-3 h-4 w-4 lg:h-5 lg:w-5 shrink-0"/> Upgrade
+            <Button variant="ghost" onClick={() => { setActiveTab('billing'); setIsMobileMenuOpen(false); }} className={`w-full justify-start text-sm px-4 py-3 lg:py-2 border transition-all ${activeTab === 'billing' ? 'bg-cyan-500/10 text-cyan-400 border-cyan-500/20' : 'bg-transparent border-transparent text-slate-400'}`}>
+              <CreditCard className="mr-3 h-5 w-5 shrink-0"/> Upgrade
             </Button>
           </nav>
+
+          <motion.div className="mt-6 bg-gradient-to-br from-[#0f172a]/80 to-[#020617]/80 border border-white/10 p-4 rounded-xl text-center relative shadow-xl z-10 flex flex-col justify-center gap-1">
+              <div className="flex justify-center items-center gap-2 mb-1">
+                  <p className="text-xs text-slate-400 uppercase tracking-widest font-bold">Credits</p>
+                  <Zap size={12} className="text-emerald-500" />
+              </div>
+              <p className="text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
+                {isSignedIn ? credits : "Login"}
+              </p>
+          </motion.div>
         </div>
-        
-        <motion.div className="mt-3 lg:mt-0 bg-gradient-to-br from-[#0f172a]/80 to-[#020617]/80 border border-white/10 p-2 lg:p-4 rounded-xl text-center relative shadow-xl z-10 flex lg:flex-col justify-between items-center lg:justify-center gap-2 lg:gap-0">
-            <div className="flex justify-center items-center gap-1 lg:gap-2 mb-0 lg:mb-1">
-                <p className="text-[10px] lg:text-xs text-slate-400 uppercase tracking-widest font-bold">Credits</p>
-                <Zap size={12} className="text-emerald-500" />
-            </div>
-            <p className="text-xl lg:text-3xl font-black text-white drop-shadow-[0_0_10px_rgba(255,255,255,0.2)]">
-              {isSignedIn ? credits : "Login"}
-            </p>
-        </motion.div>
       </aside>
 
       <main className="flex-1 flex flex-col p-4 lg:p-8 relative lg:overflow-y-auto z-10 scrollbar-thin scrollbar-thumb-white/5 scrollbar-track-transparent w-full">
@@ -438,10 +453,9 @@ export default function StudioWorkspace() {
                 <div className="flex-1 flex items-center justify-center w-full py-4 lg:pb-10 z-10">
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 w-full max-w-[90rem] mx-auto px-1">
                         {pricingPlans.map((plan) => (
-                          // 🚀 MAGIC: Yahan pe motion.div aur whileHover effect lagaya hai!
                           <motion.div 
                             key={plan.name} 
-                            whileHover={{ y: -8 }} // Hover karne par float karega
+                            whileHover={{ y: -8 }} 
                             transition={{ type: "spring", stiffness: 300, damping: 20 }}
                             className={`flex flex-col relative rounded-2xl lg:rounded-3xl p-6 lg:p-8 border backdrop-blur-md shadow-2xl transition-all duration-300 cursor-pointer ${
                               plan.popular 
