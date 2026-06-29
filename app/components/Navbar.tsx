@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { UserButton, SignedIn } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs"; // <-- Yahan se SignedIn hata diya hai
 
 export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -20,16 +20,14 @@ export default function Navbar() {
           <Link href="/generator" className="hover:text-yellow-500 transition-colors">Generator</Link>
           <Link href="/gallery" className="hover:text-yellow-500 transition-colors">Gallery</Link>
           <Link href="/upgrade" className="hover:text-yellow-500 transition-colors">Upgrade</Link>
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+          
+          {/* Clerk Profile Button */}
+          <UserButton afterSignOutUrl="/" />
         </div>
 
         {/* Mobile Hamburger Button & Profile (Desktop par hide rahega) */}
         <div className="md:hidden flex items-center gap-4">
-          <SignedIn>
-            <UserButton afterSignOutUrl="/" />
-          </SignedIn>
+          <UserButton afterSignOutUrl="/" />
           <button 
             className="text-3xl text-yellow-500 focus:outline-none"
             onClick={() => setIsMenuOpen(!isMenuOpen)}
